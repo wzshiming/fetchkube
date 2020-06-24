@@ -52,6 +52,7 @@ func FetchOnlyDefault(conf *api.Config) (*api.Config, error) {
 		return nil, fmt.Errorf("not found users %q", ctx.AuthInfo)
 	}
 	newConf.AuthInfos[ctx.AuthInfo] = auth
+	newConf.CurrentContext = conf.CurrentContext
 	return newConf, nil
 }
 
