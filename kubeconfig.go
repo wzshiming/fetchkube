@@ -17,11 +17,7 @@ func Decode(conf []byte) (*api.Config, error) {
 }
 
 func StartingConfig() (*api.Config, error) {
-	conf, err := clientcmd.DefaultClientConfig.ConfigAccess().GetStartingConfig()
-	if err != nil {
-		return nil, err
-	}
-	return conf, nil
+	return clientcmd.DefaultClientConfig.ConfigAccess().GetStartingConfig()
 }
 
 func Contexts(conf *api.Config) ([]string, error) {
@@ -66,18 +62,22 @@ func ResolveLocalPaths(conf *api.Config) (*api.Config, error) {
 
 func InlineData(conf *api.Config) (*api.Config, error) {
 	for _, cluster := range conf.Clusters {
-		err := loadFile(&cluster.CertificateAuthorityData, &cluster.CertificateAuthority)
+		err := loadFileBytes(&cluster.CertificateAuthorityData, &cluster.CertificateAuthority)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	for _, auth := range conf.AuthInfos {
-		err := loadFile(&auth.ClientCertificateData, &auth.ClientCertificate)
+		err := loadFileBytes(&auth.ClientCertificateData, &auth.ClientCertificate)
 		if err != nil {
 			return nil, err
 		}
-		err = loadFile(&auth.ClientKeyData, &auth.ClientKey)
+		err = loadFileBytes(&auth.ClientKeyData, &auth.ClientKey)
+		if err != nil {
+			return nil, err
+		}
+		err = loadFileString(&auth.Token, &auth.TokenFile)
 		if err != nil {
 			return nil, err
 		}
@@ -85,7 +85,7 @@ func InlineData(conf *api.Config) (*api.Config, error) {
 	return conf, nil
 }
 
-func loadFile(data *[]byte, filepath *string) error {
+func loadFileBytes(data *[]byte, filepath *string) error {
 	if *filepath == "" {
 		return nil
 	}
@@ -100,5 +100,24 @@ func loadFile(data *[]byte, filepath *string) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func loadFileString(data *string, filepath *string) error {
+	if *filepath == "" {
+		return nil
+	}
+	defer func() {
+		*filepath = ""
+	}()
+	var err error
+	if len(*data) != 0 {
+		return nil
+	}
+	d, err := ioutil.ReadFile(*filepath)
+	if err != nil {
+		return err
+	}
+	*data = string(d)
 	return nil
 }
